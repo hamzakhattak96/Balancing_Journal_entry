@@ -315,90 +315,72 @@ class PosSession(models.Model):
             'tag': 'reload',
             'params': {'menu_id': self.env.ref('point_of_sale.menu_point_root').id},
         }
+        # HamzaKhattak
 
+    
     def _create_balancing_line(self, data):
+        
         imbalance_amount = 0
-        checkAmount = 0
+        totalAmount = 0
+        a = 0
         checkAmount2 = 0
-        #Asirkhattak
+        checkAmount = 0
+        check2=0
+        check3=0
+        checkAmount2list = []
+        #Asir/khattak
         # raise UserError('JAAADDUUU')
         for line in self.move_id.line_ids:
             if line.account_id.name == 'Credit Receivable' and line.partner_id.name == False:
                 # if line.debit > 0:
-                checkAmount = line.debit
+                # checkAmount = line.debit
                 line.with_context(check_move_validity=False).debit = 0.0
-            if line.account_id.name == 'Account Receivable (PoS)' and line.partner_id.name == False:
-                # if line.debit > 0:
-                checkAmount2 = line.debit
+            # elif line.account_id.name == 'Account Receivable (PoS)' and line.partner_id.name == False:
+            #     # if line.debit > 0:
+            #     checkAmount2 = line.debit
                 # line.with_context(check_move_validity=False).credit = 0.0    
-            if line.account_id.name == 'Account Receivable' and line.partner_id.name == True:
+            elif line.account_id.name == 'Account Receivable' and line.partner_id.name:
                 # if line.debit > 0:
                 # checkAmount = line.debit
-                line.with_context(check_move_validity=False).credit = 0.0    
-                # elif line.credit > 0:
-                #     checkAmount = line.credit
-                #     line.with_context(check_move_validity=False).credit = 0.0
-            # if line.partner_id.name:
-            #     raise UserError(str(line.account_id.id))
-            # if line.account_id.name == 'Account Receivable' and line.partner_id.name:
-            #     credit = line.credit
-            #     line.with_context(check_move_validity=False).credit = 0.0
-            #     line.with_context(check_move_validity=False).debit += checkAmount
-            #     line.with_context(check_move_validity=False).credit = credit
-            # line.debit = 0.0
-            # raise UserError(str(line.debit))
-            # it is an excess debit so it should be credited
+                line.with_context(check_move_validity=False).credit = 0.0
             imbalance_amount += line.debit - line.credit
-            # raise UserError(str(imbalance_amount))
-
-        # if (not float_is_zero(imbalance_amount, precision_rounding=self.currency_id.rounding)):
-        #     balancing_vals = self._prepare_balancing_line_vals(imbalance_amount, self.move_id)
-        #     # raise UserError(str(data))
-        #     MoveLine = data.get('MoveLine')
-        #     MoveLine.create(balancing_vals)
+        
         if (not float_is_zero(imbalance_amount, precision_rounding=self.currency_id.rounding)):
+            existingCustomers = []
+            existingCustomersPaymentID = []
             # raise UserError(str(self.move_id.line_ids))
             for line in self.move_id.line_ids:
 
-                # raise UserError(str(self.move_id.line_ids))
+                if line.account_id.name == 'Account Receivable' and line.partner_id.name != "Walk in Customer":
+                    totalAmount = 0
+                    orders = self.env['pos.order'].search([('partner_id.name','=',line.partner_id.name), ('session_id.name','=',self.move_id.ref)])
+                    # raise UserError(str(orders.payment_ids))
+                    count = 0
+                    # raise UserError(str(len(orders)))
+                    # raise UserError(str(orders.payment_ids))
+                    for o in orders:
+                        # raise UserError(str(len(o.payment_ids.payment_method_id)))
+                        for x in o.payment_ids:
+                            if x.payment_method_id.id != 3 and o.partner_id.name == line.partner_id.name and o.session_id.name == self.move_id.ref:
+                                # raise UserError(str(len(o.payment_ids)))
+                                # raise UserError(str(line.partner_id.name))
+                                if line.partner_id.name not in existingCustomers and x.id not in existingCustomersPaymentID:
+                                    existingCustomers.append(line.partner_id.name)
+                                    existingCustomersPaymentID.append(x.id)
+                                    
+                                    totalAmount = totalAmount + x.amount
+                                    
+                                    # raise UserError(str(check2))
+                                
+                                elif line.partner_id.name in existingCustomers and x.id not in existingCustomersPaymentID:
+                                    totalAmount = totalAmount + x.amount
 
-                # if line.account_id.name != 'Credit Receivable' and line.account_id.name != 'Account Receivable (PoS)':
-                #     if line.partner_id.name == True:
-                if line.account_id.name == 'Account Receivable' and line.partner_id.name:
-                    payments = self.env['pos.payment'].search([('payment_method_id','!=',3), ('session_id.name','=',self.move_id.ref)])
-                    # raise UserError(str(len(payments)))
-                    for p in payments:
-                        orders = self.env['pos.order'].search([('partner_id.name','=',line.partner_id.name), ('session_id.name','=',self.move_id.ref)])
-                        # raise UserError(str(orders.payment_ids.payment_method_id))
-                        count = 0
-                        for o in orders:
-                            # raise UserError(str(len(o.payment_ids.payment_method_id)))
-                            for x in o.payment_ids:
-                                if x.payment_method_id.id != 3 and o.partner_id.name == line.partner_id.name and o.session_id.name == self.move_id.ref:
-                                    # raise UserError(str(o.payment_ids.amount))
-                                    # raise UserError('Hello')
-                                    checkAmount2 = x.amount
-                                    count+=1
-                    # raise UserError(str(count))
-                        # for o in orders:
-                        #     checkAmount2 = o.
-                    line.with_context(check_move_validity=False).credit = checkAmount2
-                    imbalance_amount += line.debit - line.credit + checkAmount2
-                    # raise UserError(str(checkAmount2))
-                    # raise UserError('HamzaKhattak2')
+                # if totalAmount == 110: 
+                #     raise UserError(str(totalAmount))
+                    line.with_context(check_move_validity=False).credit =  totalAmount
+                    imbalance_amount += line.debit - line.credit + totalAmount
 
-                    # raise UserError(str(line.partner_id.name))
-                    # if line.account_id.name == 'Account Receivable' and line.partner_id.name == True:
-                    #     raise UserError(str(self.move_id.line_ids))
-                    #     raise UserError(str(line.credit))
-                        # if line.debit > 0:
-                        # checkAmount = line.debit
-                    # line.with_context(check_move_validity=False).credit = checkAmount2
-                    # imbalance_amount += line.debit - line.credit + checkAmount
-                    # raise UserError('HamzaKhattak1')
-                # raise UserError(str(imbalance_amount))
-            
-        # raise UserError('HamzaKhattak3')   
+                    
         return data
 
     
